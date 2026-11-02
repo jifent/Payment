@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="ru"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Оплата</title><link rel="stylesheet" href="../App.css"><script src="https://telegram.org/js/telegram-web-app.js"></script></head>
+<body><main>
+<h1>Оплата заказа</h1>
+<div class="box" id="state">Проверяем оплату…</div>
+<button class="btn secondary" id="open" hidden>Перейти к оплате</button>
+<button class="btn primary" id="next" hidden>Продолжить</button>
+</main>
+<script src="../App.js"></script>
+<script>
+const number = param('order');
+if (!number) go('../InfoForUser/MainPage.html');
+let t;
+async function check() {
+    try {
+        const o = await api('/orders/' + encodeURIComponent(number));
+        if (o.status !== 'new') {
+            clearInterval(t);
+            if (!store.get('lastOrder', null) || store.get('lastOrder', {}).id !== o.number) store.set('lastOrder', { id: o.number, reviewed: false });
+            $('state').className = 'box ok'; $('state').textContent = 'Оплата прошла ✓ Заказ №' + o.number + ' принят в работу';
+            $('open').hidden = true; $('next').hidden = false;
+            $('next').onclick = () => go('Info.html?id=' + encodeURIComponent(o.number));
+        } else {
+            $('state').textContent = 'Заказ №' + o.number + ': ожидаем оплату ' + o.total + ' ₽';
+            if (o.pay_url) { $('open').hidden = false; $('open').onclick = () => tg ? tg.openLink(o.pay_url) : go(o.pay_url); }
+        }
+    } catch (e) { $('state').className = 'box err'; $('state').textContent = e.message; }
+}
+t = setInterval(check, 3000); check();
+</script></body></html>
